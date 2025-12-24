@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/lib/auth';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,6 +19,7 @@ interface ReportData {
 }
 
 export default function DashboardPage() {
+  const { permissions } = useAuth();
   const [reports, setReports] = useState<ReportData[]>([]);
   const [selectedReport, setSelectedReport] = useState<string>('');
   const [selectedSheet, setSelectedSheet] = useState<string>('');
@@ -58,15 +60,19 @@ export default function DashboardPage() {
     if (selectedReport && reports.length > 0) {
       const report = reports.find(r => r.id === selectedReport);
       if (report && report.parsedData) {
-        const availableSheets = report.parsedData;
+        // Filter sheets based on user permissions
+        const allowedSheets = report.parsedData.filter(sheet =>
+          permissions?.role === 'admin' ||
+          permissions?.allowedSheets.includes(sheet.sheetName)
+        );
 
-        if (availableSheets.length > 0 && !selectedSheet) {
-          setSelectedSheet(availableSheets[0].sheetName);
-          setCurrentData(availableSheets[0]);
+        if (allowedSheets.length > 0 && !selectedSheet) {
+          setSelectedSheet(allowedSheets[0].sheetName);
+          setCurrentData(allowedSheets[0]);
         }
       }
     }
-  }, [selectedReport, reports]);
+  }, [selectedReport, reports, permissions]);
 
   useEffect(() => {
     if (selectedReport && selectedSheet) {
@@ -102,7 +108,9 @@ export default function DashboardPage() {
   }
 
   const selectedReportData = reports.find(r => r.id === selectedReport);
-  const availableSheets = selectedReportData?.parsedData || [];
+  const availableSheets = selectedReportData?.parsedData.filter(sheet =>
+    permissions?.role === 'admin' || permissions?.allowedSheets.includes(sheet.sheetName)
+  ) || [];
 
   const latestWeek = currentData?.weeklyData[0];
   const previousWeek = currentData?.weeklyData[1];
