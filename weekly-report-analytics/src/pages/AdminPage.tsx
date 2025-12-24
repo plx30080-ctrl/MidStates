@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
-import { collection, getDocs, doc, updateDoc, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, query, orderBy, addDoc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, Users, FileSpreadsheet, AlertCircle, CheckCircle, Settings } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Shield, Users, FileSpreadsheet, AlertCircle, CheckCircle, Settings, UserPlus } from 'lucide-react';
 
 interface User {
   id: string;
@@ -32,7 +34,12 @@ export default function AdminPage() {
   const [availableSheets, setAvailableSheets] = useState<ReportSheet[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [addUserDialogOpen, setAddUserDialogOpen] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserDisplayName, setNewUserDisplayName] = useState('');
+  const [newUserRole, setNewUserRole] = useState<'admin' | 'user'>('user');
 
   useEffect(() => {
     if (permissions?.role === 'admin') {
@@ -105,6 +112,49 @@ export default function AdminPage() {
     setEditDialogOpen(true);
   };
 
+  const handleAddUser = async () => {
+    try {
+      setErrorMessage(null);
+
+      // Validate inputs
+      if (!newUserEmail || !newUserDisplayName) {
+        setErrorMessage('Email and display name are required');
+        return;
+      }
+
+      // Check if email already exists
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('email', '==', newUserEmail));
+      const existingUsers = await getDocs(q);
+
+      if (!existingUsers.empty) {
+        setErrorMessage('User with this email already exists');
+        return;
+      }
+
+      // Create new user
+      await addDoc(collection(db, 'users'), {
+        email: newUserEmail,
+        displayName: newUserDisplayName,
+        role: newUserRole,
+        allowedSheets: [],
+        createdAt: new Date()
+      });
+
+      // Reset form and reload data
+      setNewUserEmail('');
+      setNewUserDisplayName('');
+      setNewUserRole('user');
+      setAddUserDialogOpen(false);
+      await loadData();
+      setSaveMessage('User added successfully');
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (error) {
+      console.error('Error adding user:', error);
+      setErrorMessage('Failed to add user');
+    }
+  };
+
   if (permissions?.role !== 'admin') {
     return (
       <div className="p-8">
@@ -138,6 +188,13 @@ export default function AdminPage() {
         </Alert>
       )}
 
+      {errorMessage && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
+      )}
+
       <Tabs defaultValue="users" className="space-y-6">
         <TabsList>
           <TabsTrigger value="users">
@@ -158,10 +215,18 @@ export default function AdminPage() {
         <TabsContent value="users" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>User Management</CardTitle>
-              <CardDescription>
-                Manage user roles and permissions. Users can only access sheets assigned to them.
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>User Management</CardTitle>
+                  <CardDescription>
+                    Manage user roles and permissions. Users can only access sheets assigned to them.
+                  </CardDescription>
+                </div>
+                <Button onClick={() => setAddUserDialogOpen(true)}>
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Add User
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -336,6 +401,66 @@ export default function AdminPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add User Dialog */}
+      <Dialog open={addUserDialogOpen} onOpenChange={setAddUserDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New User</DialogTitle>
+            <DialogDescription>
+              Create a new user account. They will be able to log in with their email.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="user@example.com"
+                value={newUserEmail}
+                onChange={(e) => setNewUserEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="displayName">Display Name</Label>
+              <Input
+                id="displayName"
+                placeholder="John Doe"
+                value={newUserDisplayName}
+                onChange={(e) => setNewUserDisplayName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="role">Role</Label>
+              <Select value={newUserRole} onValueChange={(value: 'admin' | 'user') => setNewUserRole(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button variant="outline" onClick={() => {
+                setAddUserDialogOpen(false);
+                setNewUserEmail('');
+                setNewUserDisplayName('');
+                setNewUserRole('user');
+                setErrorMessage(null);
+              }}>
+                Cancel
+              </Button>
+              <Button onClick={handleAddUser}>
+                <UserPlus className="w-4 h-4 mr-2" />
+                Add User
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

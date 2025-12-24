@@ -18,6 +18,8 @@ interface ReportData {
   parsedData: SheetData[];
 }
 
+type TimeFrameType = 'weekly' | 'monthly' | 'quarterly' | 'ytd';
+
 const COLORS = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4'];
 
 export default function DashboardPage() {
@@ -27,6 +29,8 @@ export default function DashboardPage() {
   const [selectedSheet, setSelectedSheet] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [currentData, setCurrentData] = useState<SheetData | null>(null);
+  const [timeFrame, setTimeFrame] = useState<TimeFrameType>('weekly');
+  const [selectedWeekIndex, setSelectedWeekIndex] = useState<number>(0);
 
   useEffect(() => {
     loadReports();
@@ -113,8 +117,97 @@ export default function DashboardPage() {
     permissions?.role === 'admin' || permissions?.allowedSheets.includes(sheet.sheetName)
   ) || [];
 
-  const latestWeek = currentData?.weeklyData[0];
-  const previousWeek = currentData?.weeklyData[1];
+  // Helper function to aggregate week data
+  const aggregateWeeks = (weeks: any[]) => {
+    if (weeks.length === 0) return null;
+
+    const totals = weeks.reduce((acc, week) => ({
+      totalSales: acc.totalSales + week.totalSales,
+      grossProfit: acc.grossProfit + week.grossProfit,
+      associatesOnAssignment: acc.associatesOnAssignment + week.associatesOnAssignment,
+      customersBilled: acc.customersBilled + week.customersBilled,
+      hoursBilled: acc.hoursBilled + week.hoursBilled,
+      associateWages: acc.associateWages + week.associateWages,
+      associateBilling: acc.associateBilling + week.associateBilling,
+      associateGrossProfit: acc.associateGrossProfit + week.associateGrossProfit,
+      feesRevenue: acc.feesRevenue + week.feesRevenue,
+      conversionFees: acc.conversionFees + week.conversionFees,
+      permanentPlacementFees: acc.permanentPlacementFees + week.permanentPlacementFees,
+      quickHire: acc.quickHire + week.quickHire,
+      fullTimeEquivalent: acc.fullTimeEquivalent + week.fullTimeEquivalent,
+      profitPerHour: acc.profitPerHour + week.profitPerHour,
+      billRatePerHour: acc.billRatePerHour + week.billRatePerHour,
+      avgHourlyPayRate: acc.avgHourlyPayRate + week.avgHourlyPayRate,
+      associateGPperFTE: acc.associateGPperFTE + week.associateGPperFTE,
+      aoasPerFTE: acc.aoasPerFTE + week.aoasPerFTE,
+      hoursPerAssociate: acc.hoursPerAssociate + week.hoursPerAssociate,
+      revenuePerClient: acc.revenuePerClient + week.revenuePerClient,
+    }), {
+      totalSales: 0, grossProfit: 0, associatesOnAssignment: 0, customersBilled: 0,
+      hoursBilled: 0, associateWages: 0, associateBilling: 0, associateGrossProfit: 0,
+      feesRevenue: 0, conversionFees: 0, permanentPlacementFees: 0, quickHire: 0,
+      fullTimeEquivalent: 0, profitPerHour: 0, billRatePerHour: 0, avgHourlyPayRate: 0,
+      associateGPperFTE: 0, aoasPerFTE: 0, hoursPerAssociate: 0, revenuePerClient: 0,
+    });
+
+    const count = weeks.length;
+    return {
+      ...weeks[0],
+      week: `Aggregated (${count} weeks)`,
+      totalSales: totals.totalSales,
+      grossProfit: totals.grossProfit,
+      grossProfitPercent: totals.totalSales > 0 ? totals.grossProfit / totals.totalSales : 0,
+      associatesOnAssignment: totals.associatesOnAssignment / count,
+      customersBilled: totals.customersBilled / count,
+      hoursBilled: totals.hoursBilled,
+      associateWages: totals.associateWages,
+      associateBilling: totals.associateBilling,
+      associateGrossProfit: totals.associateGrossProfit,
+      associateGrossProfitPercent: totals.associateBilling > 0 ? totals.associateGrossProfit / totals.associateBilling : 0,
+      feesRevenue: totals.feesRevenue,
+      conversionFees: totals.conversionFees,
+      permanentPlacementFees: totals.permanentPlacementFees,
+      quickHire: totals.quickHire,
+      fullTimeEquivalent: totals.fullTimeEquivalent / count,
+      profitPerHour: totals.profitPerHour / count,
+      billRatePerHour: totals.billRatePerHour / count,
+      avgHourlyPayRate: totals.avgHourlyPayRate / count,
+      associateGPperFTE: totals.associateGPperFTE / count,
+      aoasPerFTE: totals.aoasPerFTE / count,
+      hoursPerAssociate: totals.hoursPerAssociate / count,
+      revenuePerClient: totals.revenuePerClient / count,
+      markupPercent: totals.associateWages > 0 ? (totals.associateGrossProfit / totals.associateWages) : 0,
+      revenueChangePriorYear: 0,
+      gpChangePriorYear: 0,
+      aoaChangePriorYear: 0,
+      customerChangePriorYear: 0,
+    };
+  };
+
+  // Calculate data based on selected time frame
+  const getTimeFrameData = () => {
+    if (!currentData) return null;
+
+    if (timeFrame === 'ytd') {
+      return currentData.ytdData;
+    } else if (timeFrame === 'weekly') {
+      return currentData.weeklyData[selectedWeekIndex];
+    } else if (timeFrame === 'monthly') {
+      // Aggregate 4 weeks starting from selected week
+      const startIdx = selectedWeekIndex;
+      const weeksToAggregate = currentData.weeklyData.slice(startIdx, startIdx + 4);
+      return aggregateWeeks(weeksToAggregate);
+    } else if (timeFrame === 'quarterly') {
+      // Aggregate 13 weeks starting from selected week
+      const startIdx = selectedWeekIndex;
+      const weeksToAggregate = currentData.weeklyData.slice(startIdx, startIdx + 13);
+      return aggregateWeeks(weeksToAggregate);
+    }
+    return null;
+  };
+
+  const latestWeek = getTimeFrameData();
+  const previousWeek = currentData?.weeklyData[selectedWeekIndex + 1];
   const thirteenWeekAvg = currentData?.thirteenWeekAverage;
   const ytdData = currentData?.ytdData;
 
@@ -238,36 +331,85 @@ export default function DashboardPage() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-slate-900 mb-2">Analytics Dashboard</h1>
-        <p className="text-slate-600">Comprehensive 13 Week Report Analysis with Deep Insights</p>
+        <p className="text-slate-600">
+          {timeFrame === 'weekly' && 'Weekly Report Analysis with Deep Insights'}
+          {timeFrame === 'monthly' && 'Monthly (4-Week) Report Analysis with Deep Insights'}
+          {timeFrame === 'quarterly' && 'Quarterly (13-Week) Report Analysis with Deep Insights'}
+          {timeFrame === 'ytd' && 'Year-to-Date Report Analysis with Deep Insights'}
+        </p>
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4">
-        <Select value={selectedReport} onValueChange={setSelectedReport}>
-          <SelectTrigger className="w-64">
-            <SelectValue placeholder="Select report" />
-          </SelectTrigger>
-          <SelectContent>
-            {reports.map(report => (
-              <SelectItem key={report.id} value={report.id}>
-                Week {report.weekNumber} - {report.fileName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-slate-700">Report</label>
+          <Select value={selectedReport} onValueChange={setSelectedReport}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select report" />
+            </SelectTrigger>
+            <SelectContent>
+              {reports.map(report => (
+                <SelectItem key={report.id} value={report.id}>
+                  Week {report.weekNumber} - {report.fileName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-        <Select value={selectedSheet} onValueChange={setSelectedSheet}>
-          <SelectTrigger className="w-64">
-            <SelectValue placeholder="Select cost center" />
-          </SelectTrigger>
-          <SelectContent>
-            {availableSheets.map(sheet => (
-              <SelectItem key={sheet.sheetName} value={sheet.sheetName}>
-                {sheet.sheetName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-slate-700">Cost Center</label>
+          <Select value={selectedSheet} onValueChange={setSelectedSheet}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select cost center" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableSheets.map(sheet => (
+                <SelectItem key={sheet.sheetName} value={sheet.sheetName}>
+                  {sheet.sheetName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-slate-700">Time Frame</label>
+          <Select value={timeFrame} onValueChange={(value: TimeFrameType) => {
+            setTimeFrame(value);
+            setSelectedWeekIndex(0);
+          }}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="weekly">Weekly</SelectItem>
+              <SelectItem value="monthly">Monthly (4 weeks)</SelectItem>
+              <SelectItem value="quarterly">Quarterly (13 weeks)</SelectItem>
+              <SelectItem value="ytd">Year to Date</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {timeFrame !== 'ytd' && currentData && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700">
+              {timeFrame === 'weekly' ? 'Select Week' : 'Starting Week'}
+            </label>
+            <Select value={selectedWeekIndex.toString()} onValueChange={(value) => setSelectedWeekIndex(parseInt(value))}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {currentData.weeklyData.map((week, idx) => (
+                  <SelectItem key={idx} value={idx.toString()}>
+                    {week.week} - {week.fiscalYear}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       {latestWeek && insights && (
