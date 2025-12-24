@@ -153,34 +153,59 @@ export default function InsightsPage() {
 
     try {
       const latestWeek = currentData.weeklyData[0];
-      const previousWeek = currentData.weeklyData[1];
       const thirteenWeekAvg = currentData.thirteenWeekAverage;
+
+      // Build comprehensive data table for all weeks
+      const allWeeksData = currentData.weeklyData.map(week => `
+${week.week}:
+  - Associates on Assignment (AOA): ${week.associatesOnAssignment}
+  - Customers Billed: ${week.customersBilled}
+  - Total Sales: ${formatCurrency(week.totalSales)}
+  - Gross Profit: ${formatCurrency(week.grossProfit)}
+  - GP%: ${formatPercent(week.grossProfitPercent)}
+  - Full-Time Equivalent (FTE): ${week.fullTimeEquivalent}
+  - GP per FTE: ${formatCurrency(week.associateGPperFTE)}
+  - AOAs per FTE: ${formatNumber(week.aoasPerFTE)}
+  - Bill Rate/Hour: ${formatCurrency(week.billRatePerHour)}
+  - Pay Rate/Hour: ${formatCurrency(week.avgHourlyPayRate)}
+  - Markup %: ${formatPercent(week.markupPercent)}
+  - Profit/Hour: ${formatCurrency(week.profitPerHour)}
+  - Hours Billed: ${formatNumber(week.hoursBilled)}
+  - Hours/Associate: ${formatNumber(week.hoursPerAssociate)}
+  - Revenue/Client: ${formatCurrency(week.revenuePerClient)}
+  - Associate Billing: ${formatCurrency(week.associateBilling)}
+  - Associate GP: ${formatCurrency(week.associateGrossProfit)}
+  - Associate GP%: ${formatPercent(week.associateGrossProfitPercent)}
+  - Fee Revenue: ${formatCurrency(week.feesRevenue)}
+  - Conversion Fees: ${formatCurrency(week.conversionFees)}
+  - Permanent Placement Fees: ${formatCurrency(week.permanentPlacementFees)}
+  - QuickHire: ${formatCurrency(week.quickHire)}
+`).join('\n');
 
       // Prepare context for AI
       const context = `
 You are analyzing staffing and financial data for ${currentData.sheetName}.
 
-Latest Week Data (${latestWeek.week}):
-- Associates on Assignment: ${latestWeek.associatesOnAssignment}
-- Total Sales: ${formatCurrency(latestWeek.totalSales)}
-- Gross Profit: ${formatCurrency(latestWeek.grossProfit)} (${formatPercent(latestWeek.grossProfitPercent)})
-- Customers Billed: ${latestWeek.customersBilled}
-- Bill Rate: ${formatCurrency(latestWeek.billRatePerHour)}/hour
-- Pay Rate: ${formatCurrency(latestWeek.avgHourlyPayRate)}/hour
-- Markup: ${formatPercent(latestWeek.markupPercent)}
-- Hours Billed: ${formatNumber(latestWeek.hoursBilled)}
+IMPORTANT INSTRUCTIONS:
+- If asked for a specific value from a specific week, look it up in the data below and return ONLY that value with minimal explanation.
+- For simple data lookup questions (e.g., "What was X in week Y?"), respond with just the value, like "The GP/FTE for week 45 was $3,800"
+- Only provide detailed analysis, trends, or recommendations when explicitly asked.
+- Always reference actual data from the weeks below - do NOT estimate or calculate values that are already provided.
 
-Week over Week Changes:
-- AOA Change: ${latestWeek.associatesOnAssignment - previousWeek.associatesOnAssignment}
-- Revenue Change: ${formatCurrency(latestWeek.totalSales - previousWeek.totalSales)}
-- GP Change: ${formatCurrency(latestWeek.grossProfit - previousWeek.grossProfit)}
+ALL WEEKLY DATA:
+${allWeeksData}
 
-13 Week Average (if available):
+13-Week Average (for comparison):
 ${thirteenWeekAvg ? `
 - AOA: ${thirteenWeekAvg.associatesOnAssignment}
-- Revenue: ${formatCurrency(thirteenWeekAvg.totalSales)}
+- Total Sales: ${formatCurrency(thirteenWeekAvg.totalSales)}
+- Gross Profit: ${formatCurrency(thirteenWeekAvg.grossProfit)}
 - GP%: ${formatPercent(thirteenWeekAvg.grossProfitPercent)}
+- GP per FTE: ${formatCurrency(thirteenWeekAvg.associateGPperFTE)}
+- AOAs per FTE: ${formatNumber(thirteenWeekAvg.aoasPerFTE)}
 ` : 'Not available'}
+
+Latest Week: ${latestWeek.week}
 `;
 
       // Call OpenAI API
