@@ -61,11 +61,11 @@ export default function DashboardPage() {
       const report = reports.find(r => r.id === selectedReport);
       if (report && report.parsedData) {
         // Filter sheets based on user permissions
-        const allowedSheets = report.parsedData.filter(sheet => 
-          permissions?.role === 'admin' || 
+        const allowedSheets = report.parsedData.filter(sheet =>
+          permissions?.role === 'admin' ||
           permissions?.allowedSheets.includes(sheet.sheetName)
         );
-        
+
         if (allowedSheets.length > 0 && !selectedSheet) {
           setSelectedSheet(allowedSheets[0].sheetName);
           setCurrentData(allowedSheets[0]);

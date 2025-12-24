@@ -1,8 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { signInWithPopup, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth';
-import type { User } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, microsoftProvider, db } from './firebase';
+import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
+import { db } from './firebase';
 
 export interface UserPermissions {
   role: 'admin' | 'user';
@@ -12,10 +10,10 @@ export interface UserPermissions {
 }
 
 interface AuthContextType {
-  user: User | null;
+  user: { email: string } | null;
   permissions: UserPermissions | null;
   loading: boolean;
-  signIn: () => Promise<void>;
+  signIn: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshPermissions: () => Promise<void>;
 }
@@ -31,69 +29,59 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<{ email: string } | null>(null);
   const [permissions, setPermissions] = useState<UserPermissions | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadPermissions = async (uid: string, email: string, displayName: string) => {
+  const loadPermissions = async (email: string) => {
     try {
-      const userDoc = await getDoc(doc(db, 'users', uid));
-      
-      if (userDoc.exists()) {
+      // Query users collection by email
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('email', '==', email));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        const userDoc = querySnapshot.docs[0];
         const data = userDoc.data();
         setPermissions({
           role: data.role || 'user',
           allowedSheets: data.allowedSheets || [],
-          email,
-          displayName
+          email: data.email,
+          displayName: data.displayName || email
         });
+        return true;
       } else {
-        // Create new user document with default permissions
-        const newPermissions: UserPermissions = {
-          role: 'user',
-          allowedSheets: [],
-          email,
-          displayName
-        };
-        
-        await setDoc(doc(db, 'users', uid), {
-          role: 'user',
-          allowedSheets: [],
-          email,
-          displayName,
-          createdAt: new Date()
-        });
-        
-        setPermissions(newPermissions);
+        // Email not found in database
+        return false;
       }
     } catch (error) {
       console.error('Error loading permissions:', error);
+      return false;
     }
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      
-      if (user) {
-        await loadPermissions(
-          user.uid,
-          user.email || '',
-          user.displayName || user.email || 'Unknown User'
-        );
-      } else {
-        setPermissions(null);
-      }
-      
+    // Check localStorage for existing session
+    const savedEmail = localStorage.getItem('userEmail');
+    if (savedEmail) {
+      setUser({ email: savedEmail });
+      loadPermissions(savedEmail).then(() => {
+        setLoading(false);
+      });
+    } else {
       setLoading(false);
-    });
-
-    return unsubscribe;
+    }
   }, []);
 
-  const signIn = async () => {
+  const signIn = async (email: string) => {
     try {
-      await signInWithPopup(auth, microsoftProvider);
+      const success = await loadPermissions(email);
+      if (success) {
+        setUser({ email });
+        localStorage.setItem('userEmail', email);
+      } else {
+        throw new Error('Email not found in system');
+      }
     } catch (error) {
       console.error('Sign in error:', error);
       throw error;
@@ -102,8 +90,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
-      await firebaseSignOut(auth);
+      setUser(null);
       setPermissions(null);
+      localStorage.removeItem('userEmail');
     } catch (error) {
       console.error('Sign out error:', error);
       throw error;
@@ -112,11 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshPermissions = async () => {
     if (user) {
-      await loadPermissions(
-        user.uid,
-        user.email || '',
-        user.displayName || user.email || 'Unknown User'
-      );
+      await loadPermissions(user.email);
     }
   };
 

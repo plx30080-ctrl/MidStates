@@ -50,7 +50,7 @@ export default function UploadPage() {
         fileName: parsed.fileName,
         weekNumber: parsed.weekNumber,
         uploadDate: parsed.uploadDate,
-        uploadedBy: permissions?.email,
+        uploadedBy: permissions?.email || 'system',
         fileUrl: downloadURL,
         sheets: parsed.sheets.map(sheet => ({
           sheetName: sheet.sheetName,

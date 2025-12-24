@@ -21,7 +21,7 @@ export default function Navigation({ children }: { children: React.ReactNode }) 
   const navItems = [
     { path: '/', label: 'Dashboard', icon: BarChart3 },
     { path: '/insights', label: 'AI Insights', icon: Brain },
-    ...(permissions?.role === 'admin' 
+    ...(permissions?.role === 'admin'
       ? [
           { path: '/upload', label: 'Upload', icon: Upload },
           { path: '/admin', label: 'Admin', icon: Shield }
