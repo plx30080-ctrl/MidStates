@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { BarChart3, Upload, Brain, Shield, LogOut, TrendingUp } from 'lucide-react';
+import { GlossarySearch } from '@/components/GlossarySearch';
 
 export default function Navigation({ children }: { children: React.ReactNode }) {
   const { permissions, signOut } = useAuth();
@@ -73,6 +74,9 @@ export default function Navigation({ children }: { children: React.ReactNode }) 
                   </Link>
                 );
               })}
+
+              {/* Glossary Search Button */}
+              <GlossarySearch variant="ghost" />
             </div>
 
             {/* User Menu */}
