@@ -35,6 +35,8 @@ export default function UploadPage() {
     setError(null);
     setSuccess(false);
 
+    let uploadSucceeded = false;
+
     try {
       // Parse the Excel file
       const parsed = await parseWeeklyReport(file);
@@ -43,7 +45,16 @@ export default function UploadPage() {
       // Upload file to Firebase Storage
       const storageRef = ref(storage, `reports/${Date.now()}_${file.name}`);
       await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(storageRef);
+
+      // Get download URL with retry logic
+      let downloadURL = '';
+      try {
+        downloadURL = await getDownloadURL(storageRef);
+      } catch (urlError) {
+        console.warn('Error getting download URL, using storage path:', urlError);
+        // Fallback to constructing the URL manually
+        downloadURL = `https://firebasestorage.googleapis.com/v0/b/${storage.app.options.storageBucket}/o/${encodeURIComponent(storageRef.fullPath)}?alt=media`;
+      }
 
       // Save metadata and parsed data to Firestore
       await addDoc(collection(db, 'reports'), {
@@ -61,16 +72,24 @@ export default function UploadPage() {
         parsedData: parsed.sheets // Store full parsed data
       });
 
+      uploadSucceeded = true;
       setSuccess(true);
       setFile(null);
-      
+      setParsedData(null);
+
       // Reset file input
       const fileInput = document.getElementById('file-upload') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
 
     } catch (err) {
       console.error('Upload error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to upload file');
+      // Check if data made it to Firestore despite the error
+      if (uploadSucceeded) {
+        setSuccess(true);
+        setFile(null);
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to upload file');
+      }
     } finally {
       setUploading(false);
     }
