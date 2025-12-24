@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Sparkles, Send, TrendingUp, AlertTriangle, Info, Loader2, Brain } from 'lucide-react';
 import { formatCurrency, formatPercent, formatNumber } from '@/lib/parseExcel';
 import type { SheetData } from '@/lib/parseExcel';
+import { generateAIInsight } from '@/lib/openai';
 
 interface ReportData {
   id: string;
@@ -180,40 +181,14 @@ ${thirteenWeekAvg ? `
 - Revenue: ${formatCurrency(thirteenWeekAvg.totalSales)}
 - GP%: ${formatPercent(thirteenWeekAvg.grossProfitPercent)}
 ` : 'Not available'}
-
-User Question: ${question}
-
-Please provide a clear, concise answer based on this data. Focus on actionable insights.
 `;
 
-      // Call Anthropic API
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          messages: [
-            {
-              role: 'user',
-              content: context
-            }
-          ]
-        })
-      });
-
-      const data = await response.json();
-      const aiResponse = data.content
-        .filter((item: any) => item.type === 'text')
-        .map((item: any) => item.text)
-        .join('\n');
-
+      // Call OpenAI API
+      const aiResponse = await generateAIInsight(context, question);
       setAnswer(aiResponse);
     } catch (error) {
       console.error('Error getting AI response:', error);
-      setAnswer('Sorry, I encountered an error processing your question. Please try again.');
+      setAnswer('Sorry, I encountered an error processing your question. Please check your OpenAI API key configuration and try again.');
     } finally {
       setLoading(false);
     }
@@ -320,10 +295,10 @@ Please provide a clear, concise answer based on this data. Focus on actionable i
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Brain className="w-5 h-5 mr-2 text-purple-600" />
-                Ask Claude
+                Ask AI Assistant
               </CardTitle>
               <CardDescription>
-                Ask questions about trends, comparisons, or get recommendations
+                Ask questions about trends, comparisons, or get recommendations (Powered by OpenAI GPT-4o)
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
