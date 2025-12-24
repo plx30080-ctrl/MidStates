@@ -35,28 +35,41 @@ export default function UploadPage() {
     setError(null);
     setSuccess(false);
 
-    let uploadSucceeded = false;
+    let storageUploadComplete = false;
+    let firestoreUploadComplete = false;
 
     try {
-      // Parse the Excel file
+      // Step 1: Parse the Excel file
+      console.log('Step 1: Parsing Excel file...');
       const parsed = await parseWeeklyReport(file);
       setParsedData(parsed);
+      console.log('✓ Excel file parsed successfully');
 
-      // Upload file to Firebase Storage
+      // Step 2: Upload file to Firebase Storage
+      console.log('Step 2: Uploading to Firebase Storage...');
       const storageRef = ref(storage, `reports/${Date.now()}_${file.name}`);
-      await uploadBytes(storageRef, file);
+      console.log('Storage path:', storageRef.fullPath);
+      console.log('Storage bucket:', storage.app.options.storageBucket);
 
-      // Get download URL with retry logic
+      await uploadBytes(storageRef, file);
+      storageUploadComplete = true;
+      console.log('✓ File uploaded to Storage successfully');
+
+      // Step 3: Get download URL with retry logic
+      console.log('Step 3: Getting download URL...');
       let downloadURL = '';
       try {
         downloadURL = await getDownloadURL(storageRef);
+        console.log('✓ Download URL retrieved successfully');
       } catch (urlError) {
-        console.warn('Error getting download URL, using storage path:', urlError);
+        console.warn('⚠ Error getting download URL, using fallback:', urlError);
         // Fallback to constructing the URL manually
         downloadURL = `https://firebasestorage.googleapis.com/v0/b/${storage.app.options.storageBucket}/o/${encodeURIComponent(storageRef.fullPath)}?alt=media`;
+        console.log('Using fallback URL:', downloadURL);
       }
 
-      // Save metadata and parsed data to Firestore
+      // Step 4: Save metadata and parsed data to Firestore
+      console.log('Step 4: Saving metadata to Firestore...');
       await addDoc(collection(db, 'reports'), {
         fileName: parsed.fileName,
         weekNumber: parsed.weekNumber,
@@ -71,8 +84,11 @@ export default function UploadPage() {
         })),
         parsedData: parsed.sheets // Store full parsed data
       });
+      firestoreUploadComplete = true;
+      console.log('✓ Metadata saved to Firestore successfully');
 
-      uploadSucceeded = true;
+      // Upload complete
+      console.log('✓ Upload process completed successfully!');
       setSuccess(true);
       setFile(null);
       setParsedData(null);
@@ -82,11 +98,20 @@ export default function UploadPage() {
       if (fileInput) fileInput.value = '';
 
     } catch (err) {
-      console.error('Upload error:', err);
-      // Check if data made it to Firestore despite the error
-      if (uploadSucceeded) {
+      console.error('✗ Upload error at step:',
+        !storageUploadComplete ? 'Storage upload' :
+        !firestoreUploadComplete ? 'Firestore save' :
+        'Unknown');
+      console.error('Error details:', err);
+
+      // If Storage upload succeeded, show success despite later errors
+      if (storageUploadComplete && firestoreUploadComplete) {
+        console.log('Both uploads succeeded, showing success despite error');
         setSuccess(true);
         setFile(null);
+      } else if (storageUploadComplete) {
+        console.log('Storage upload succeeded but Firestore failed');
+        setError('File uploaded but metadata save failed. Please contact support.');
       } else {
         setError(err instanceof Error ? err.message : 'Failed to upload file');
       }
