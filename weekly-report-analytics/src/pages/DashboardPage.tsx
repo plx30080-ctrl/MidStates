@@ -9,6 +9,8 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, L
 import { TrendingUp, TrendingDown, Users, DollarSign, Percent, Loader2, Target, Zap, AlertTriangle, CheckCircle, Activity } from 'lucide-react';
 import { formatCurrency, formatPercent, formatNumber } from '@/lib/parseExcel';
 import type { SheetData } from '@/lib/parseExcel';
+import GlossaryTooltip from '@/components/GlossaryTooltip';
+import { getGlossaryKeyFromLabel } from '@/data/glossaryMapping';
 
 interface ReportData {
   id: string;
@@ -1147,9 +1149,17 @@ function InsightCard({ title, metrics, icon, status }: InsightCardProps) {
 }
 
 function DetailMetric({ label, value }: { label: string; value: string }) {
+  const glossaryKey = getGlossaryKeyFromLabel(label);
+
   return (
     <div>
-      <p className="text-xs text-slate-500 mb-1">{label}</p>
+      <p className="text-xs text-slate-500 mb-1">
+        {glossaryKey ? (
+          <GlossaryTooltip variableKey={glossaryKey}>{label}</GlossaryTooltip>
+        ) : (
+          label
+        )}
+      </p>
       <p className="text-lg font-semibold text-slate-900">{value}</p>
     </div>
   );
@@ -1168,9 +1178,17 @@ function YoYMetric({ label, change, current, format }: {
     ? formatPercent(current)
     : formatNumber(current);
 
+  const glossaryKey = getGlossaryKeyFromLabel(label);
+
   return (
     <div>
-      <p className="text-xs text-slate-500 mb-1">{label}</p>
+      <p className="text-xs text-slate-500 mb-1">
+        {glossaryKey ? (
+          <GlossaryTooltip variableKey={glossaryKey}>{label}</GlossaryTooltip>
+        ) : (
+          label
+        )}
+      </p>
       <p className="text-lg font-semibold text-slate-900 mb-1">{formattedCurrent}</p>
       <div className={`flex items-center text-sm ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
         {isPositive ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
@@ -1191,9 +1209,17 @@ function EfficiencyMetric({ label, value, benchmark, format }: {
   const formattedValue = format === 'currency' ? formatCurrency(value) : formatNumber(value);
   const formattedBenchmark = format === 'currency' ? formatCurrency(benchmark) : formatNumber(benchmark);
 
+  const glossaryKey = getGlossaryKeyFromLabel(label);
+
   return (
     <div>
-      <p className="text-xs text-slate-500 mb-1">{label}</p>
+      <p className="text-xs text-slate-500 mb-1">
+        {glossaryKey ? (
+          <GlossaryTooltip variableKey={glossaryKey}>{label}</GlossaryTooltip>
+        ) : (
+          label
+        )}
+      </p>
       <p className="text-lg font-semibold text-slate-900 mb-1">{formattedValue}</p>
       <div className="flex items-center gap-2">
         <span className="text-xs text-slate-500">Avg: {formattedBenchmark}</span>
@@ -1227,9 +1253,17 @@ function ComparisonMetric({ label, current, benchmark, format }: {
     ? `${benchmark.toFixed(2)}%`
     : formatNumber(benchmark);
 
+  const glossaryKey = getGlossaryKeyFromLabel(label);
+
   return (
     <div>
-      <p className="text-xs text-slate-500 mb-1">{label}</p>
+      <p className="text-xs text-slate-500 mb-1">
+        {glossaryKey ? (
+          <GlossaryTooltip variableKey={glossaryKey}>{label}</GlossaryTooltip>
+        ) : (
+          label
+        )}
+      </p>
       <div className="flex items-baseline gap-2 mb-1">
         <p className="text-lg font-semibold text-slate-900">{formattedCurrent}</p>
         <span className={`text-xs font-medium ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
@@ -1253,11 +1287,19 @@ function ScoreItem({ label, value, threshold, invert = false, suffix = '%' }: {
   const Icon = status === 'positive' ? CheckCircle : AlertTriangle;
   const color = status === 'positive' ? 'text-green-600' : 'text-red-600';
 
+  const glossaryKey = getGlossaryKeyFromLabel(label);
+
   return (
     <div className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
       <div className="flex items-center gap-2">
         <Icon className={`w-4 h-4 ${color}`} />
-        <span className="text-sm font-medium text-slate-700">{label}</span>
+        <span className="text-sm font-medium text-slate-700">
+          {glossaryKey ? (
+            <GlossaryTooltip variableKey={glossaryKey}>{label}</GlossaryTooltip>
+          ) : (
+            label
+          )}
+        </span>
       </div>
       <span className={`text-sm font-bold ${color}`}>
         {invert ? -value.toFixed(1) : value.toFixed(1)}{suffix}
