@@ -6,9 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, ComposedChart, PieChart, Pie, Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
-import { TrendingUp, TrendingDown, Users, DollarSign, Percent, Loader2, Target, Zap, Award, AlertTriangle, CheckCircle, Activity, Briefcase, PieChart as PieChartIcon } from 'lucide-react';
+import { TrendingUp, TrendingDown, Users, DollarSign, Percent, Loader2, Target, Zap, AlertTriangle, CheckCircle, Activity } from 'lucide-react';
 import { formatCurrency, formatPercent, formatNumber } from '@/lib/parseExcel';
-import type { SheetData, WeekData } from '@/lib/parseExcel';
+import type { SheetData } from '@/lib/parseExcel';
 
 interface ReportData {
   id: string;
@@ -666,7 +666,7 @@ export default function DashboardPage() {
                           cx="50%"
                           cy="50%"
                           labelLine={false}
-                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+                          label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(1)}%`}
                           outerRadius={120}
                           fill="#8884d8"
                           dataKey="value"
