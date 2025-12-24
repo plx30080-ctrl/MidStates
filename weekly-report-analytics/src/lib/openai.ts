@@ -1,9 +1,16 @@
 import OpenAI from 'openai';
 
+// Get API key from environment variables
+const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+
+if (!apiKey) {
+  console.error('VITE_OPENAI_API_KEY is not set. Please add it to your .env file.');
+}
+
 // Initialize OpenAI client
 // The API key should be set in environment variables
 const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+  apiKey: apiKey || 'dummy-key', // Provide fallback to prevent initialization error
   dangerouslyAllowBrowser: true // Required for client-side usage
 });
 
@@ -16,6 +23,11 @@ export const generateAIInsight = async (
   context: string,
   question: string
 ): Promise<string> => {
+  // Check if API key is configured
+  if (!apiKey || apiKey === 'dummy-key') {
+    throw new Error('OpenAI API key is not configured. Please add VITE_OPENAI_API_KEY to your .env file and restart the development server.');
+  }
+
   try {
     const messages: ChatMessage[] = [
       {
