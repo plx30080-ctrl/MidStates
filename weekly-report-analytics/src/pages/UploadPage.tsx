@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useAuth } from '@/lib/auth';
 import { parseWeeklyReport } from '@/lib/parseExcel';
 import type { ParsedReport } from '@/lib/parseExcel';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -11,7 +10,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function UploadPage() {
-  const { permissions } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -50,7 +48,7 @@ export default function UploadPage() {
         fileName: parsed.fileName,
         weekNumber: parsed.weekNumber,
         uploadDate: parsed.uploadDate,
-        uploadedBy: permissions?.email,
+        uploadedBy: 'system',
         fileUrl: downloadURL,
         sheets: parsed.sheets.map(sheet => ({
           sheetName: sheet.sheetName,
@@ -75,19 +73,6 @@ export default function UploadPage() {
       setUploading(false);
     }
   };
-
-  if (permissions?.role !== 'admin') {
-    return (
-      <div className="p-8">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            You don't have permission to upload files. Contact an administrator.
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
 
   return (
     <div className="p-8 max-w-4xl mx-auto">

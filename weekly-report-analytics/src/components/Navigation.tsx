@@ -1,19 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { BarChart3, Upload, Brain, Shield, LogOut, TrendingUp } from 'lucide-react';
+import { BarChart3, Upload, Brain, Shield, TrendingUp } from 'lucide-react';
 
 export default function Navigation({ children }: { children: React.ReactNode }) {
-  const { permissions, signOut } = useAuth();
   const location = useLocation();
 
   const isActive = (path: string) => location.pathname === path;
@@ -21,23 +10,9 @@ export default function Navigation({ children }: { children: React.ReactNode }) 
   const navItems = [
     { path: '/', label: 'Dashboard', icon: BarChart3 },
     { path: '/insights', label: 'AI Insights', icon: Brain },
-    ...(permissions?.role === 'admin' 
-      ? [
-          { path: '/upload', label: 'Upload', icon: Upload },
-          { path: '/admin', label: 'Admin', icon: Shield }
-        ]
-      : []
-    )
+    { path: '/upload', label: 'Upload', icon: Upload },
+    { path: '/admin', label: 'Admin', icon: Shield }
   ];
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -75,40 +50,6 @@ export default function Navigation({ children }: { children: React.ReactNode }) 
               })}
             </div>
 
-            {/* User Menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-cyan-500 text-white">
-                      {getInitials(permissions?.displayName || 'U')}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium">{permissions?.displayName}</p>
-                    <p className="text-xs text-slate-500">{permissions?.email}</p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-xs text-slate-500">
-                  Role: {permissions?.role}
-                </DropdownMenuItem>
-                {permissions?.role !== 'admin' && (
-                  <DropdownMenuItem className="text-xs text-slate-500">
-                    Sheet Access: {permissions?.allowedSheets.length}
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => signOut()} className="text-red-600">
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Sign Out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </div>
       </nav>

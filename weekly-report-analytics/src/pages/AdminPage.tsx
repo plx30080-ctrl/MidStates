@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/lib/auth';
 import { collection, getDocs, doc, updateDoc, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,7 +26,6 @@ interface ReportSheet {
 }
 
 export default function AdminPage() {
-  const { permissions, refreshPermissions } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [availableSheets, setAvailableSheets] = useState<ReportSheet[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -35,10 +33,8 @@ export default function AdminPage() {
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (permissions?.role === 'admin') {
-      loadData();
-    }
-  }, [permissions]);
+    loadData();
+  }, []);
 
   const loadData = async () => {
     try {
@@ -81,7 +77,6 @@ export default function AdminPage() {
     try {
       await updateDoc(doc(db, 'users', userId), { role: newRole });
       await loadData();
-      await refreshPermissions();
       setSaveMessage(`User role updated to ${newRole}`);
       setTimeout(() => setSaveMessage(null), 3000);
     } catch (error) {
@@ -104,19 +99,6 @@ export default function AdminPage() {
     setSelectedUser(user);
     setEditDialogOpen(true);
   };
-
-  if (permissions?.role !== 'admin') {
-    return (
-      <div className="p-8">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            You don't have permission to access the admin panel.
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
 
   return (
     <div className="p-8 space-y-6">

@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/lib/auth';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,7 +28,6 @@ interface Insight {
 }
 
 export default function InsightsPage() {
-  const { permissions } = useAuth();
   const [reports, setReports] = useState<ReportData[]>([]);
   const [selectedReport, setSelectedReport] = useState<string>('');
   const [selectedSheet, setSelectedSheet] = useState<string>('');
@@ -220,9 +218,7 @@ Please provide a clear, concise answer based on this data. Focus on actionable i
   };
 
   const selectedReportData = reports.find(r => r.id === selectedReport);
-  const availableSheets = selectedReportData?.parsedData.filter(sheet =>
-    permissions?.role === 'admin' || permissions?.allowedSheets.includes(sheet.sheetName)
-  ) || [];
+  const availableSheets = selectedReportData?.parsedData || [];
 
   return (
     <div className="p-8 space-y-6">
